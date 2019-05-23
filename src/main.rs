@@ -3,14 +3,15 @@ extern crate actix_web;
 extern crate lazy_static;
 extern crate rand;
 
+use std::collections::HashSet;
 use std::sync::Mutex;
-
 use actix_web::{http, server, App, Path, Responder};
 use rand::prelude::{ThreadRng, thread_rng};
 use rand::seq::SliceRandom;
 
 lazy_static! {
     static ref KEYS: Mutex<Vec<String>> = Mutex::new(vec![]);
+    static ref HASH_KEYS: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
 }
 
 fn get_key() -> String {
@@ -24,12 +25,17 @@ fn len_key() -> usize {
 }
 
 fn add_key(value: String) {
-    KEYS.lock().unwrap().push(value)
+    if !HASH_KEYS.lock().unwrap().contains(&value) {
+        KEYS.lock().unwrap().push(value.clone());
+        HASH_KEYS.lock().unwrap().insert(value);
+    }
 }
 
 fn del_key(value: String) {
-    let index: usize = KEYS.lock().unwrap().iter().position(|x| *x == value).unwrap();
-    KEYS.lock().unwrap().remove(index);
+    if HASH_KEYS.lock().unwrap().contains(&value) {
+        let index: usize = KEYS.lock().unwrap().iter().position(|x| *x == value).unwrap();
+        KEYS.lock().unwrap().remove(index);
+    }
 }
 
 fn index_get(_info: Path<()>) -> impl Responder {
