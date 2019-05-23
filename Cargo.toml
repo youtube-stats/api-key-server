@@ -1,9 +1,20 @@
 [package]
-name = "rusty"
+name = "api-key-server"
 version = "0.1.0"
 authors = ["Salvador Guzman <guzmansalv@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
 
 [dependencies]
+rand = "0.6.5"
+actix-web = "0.7.19"
+openssl-sys = "*"
+
+[features]
+# Force openssl-sys to staticly link in the openssl library. Necessary when
+# cross compiling to x86_64-unknown-linux-musl.
+vendored = ["openssl-sys/vendored"]
