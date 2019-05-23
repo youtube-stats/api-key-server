@@ -1,49 +1,69 @@
 extern crate actix_web;
-
-#[macro_use]
-extern crate lazy_static;
 extern crate rand;
 
 use actix_web::{http, server, App, Path, Responder};
 use rand::seq::SliceRandom;
+use std::cell::RefCell;
 
-lazy_static! {
-    static ref KEYS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(vec![]);
+thread_local! {
+    pub static KEYS: RefCell<Vec<String>> = RefCell::new(vec![]);
+}
+
+fn get_key() -> String {
+    let mut rng: rand::prelude::ThreadRng = rand::prelude::thread_rng();
+
+    KEYS.with(|keys: &RefCell<Vec<String>>| {
+        keys.borrow().choose(&mut rng).unwrap().clone()
+    })
+}
+
+fn len_key() -> usize {
+    KEYS.with(|keys: &RefCell<Vec<String>>| {
+        keys.borrow().len()
+    })
+}
+
+fn add_key(value: String) {
+    KEYS.with(|keys: &RefCell<Vec<String>>| {
+        keys.borrow_mut().push(value)
+    })
+}
+
+fn del_key(value: String) {
+    KEYS.with(|keys: &RefCell<Vec<String>>| {
+        let index: usize = keys.borrow().iter().position(|x| *x == value).unwrap();
+        keys.borrow_mut().remove(index);
+    })
 }
 
 fn index_get(_info: Path<()>) -> impl Responder {
-    let mut rng: rand::prelude::ThreadRng = rand::prelude::thread_rng();
-    let keys: Vec<String> = KEYS.lock().unwrap().to_vec();
-    let string: String = keys.choose(&mut rng).unwrap().clone();
+    let key: String = get_key();
 
-    println!("{}", string);
-    format!("{}", string)
+    println!("GET {}", key);
+    format!("{}", key)
 }
 
 fn index_len(_info: Path<()>) -> impl Responder {
-    let len: usize = KEYS.lock().unwrap().to_vec().len();
+    let len: usize = len_key();
 
-    println!("LEN");
+    println!("LEN {}", len);
     format!("{}", len)
 }
 
 fn index_add(info: Path<(String)>) -> impl Responder {
     let value: String = info.into_inner();
-    let mut keys: Vec<String> = KEYS.lock().unwrap().to_vec();
-    keys.push(value);
+    add_key(value.clone());
 
-    println!("ADD endpoint - adding {}", keys.last().unwrap());
-    format!("ADD\n")
+    println!("ADD endpoint - adding {}", value);
+    format!("ADD {}\n", value)
 }
 
 fn index_del(info: Path<(String)>) -> impl Responder {
-    let val: String = info.into_inner();
-    let mut xs: Vec<String> = KEYS.lock().unwrap().to_vec();
-    let index = xs.iter().position(|x| *x == val).unwrap();
-    xs.remove(index);
+    let value: String = info.into_inner();
+    del_key(value.clone());
 
-    println!("DEL endpoint - deleting {}", val);
-    format!("DEL\n")
+    println!("DEL endpoint - deleting {}", value);
+    format!("DEL {}\n", value)
 }
 
 fn main() {
