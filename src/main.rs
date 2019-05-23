@@ -6,8 +6,8 @@ extern crate rand;
 use std::collections::HashSet;
 use std::sync::Mutex;
 use actix_web::{http, server, App, Path, Responder};
-use rand::prelude::{ThreadRng, thread_rng};
-use rand::seq::SliceRandom;
+use rand::prelude::thread_rng;
+use rand::Rng;
 
 lazy_static! {
     static ref KEYS: Mutex<Vec<String>> = Mutex::new(vec![]);
@@ -15,9 +15,8 @@ lazy_static! {
 }
 
 fn get_key() -> String {
-    let mut rng: ThreadRng = thread_rng();
-
-    KEYS.lock().unwrap().choose(&mut rng).unwrap().clone()
+    let keys = KEYS.lock().unwrap();
+    keys[thread_rng().gen_range(0, keys.len())].clone()
 }
 
 fn len_key() -> usize {
@@ -64,7 +63,7 @@ fn index_del(info: Path<(String)>) -> impl Responder {
     let value: String = info.into_inner();
     del_key(value.clone());
 
-    println!("DEL endpoint - deleting {}", value);
+    println!("DEL endpoint - deleting {} - new size {}", value, len_key());
     format!("DEL {}\n", value)
 }
 
