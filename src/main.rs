@@ -6,21 +6,21 @@ fn main() {
         let string: &str = "GET";
 
         println!("{}", string);
-        format!("{}", string)
+        format!("{}\n", string)
     }
 
     fn index_add(info: Path<(String)>) -> impl Responder {
         let string: &str = "ADD";
 
         println!("{} endpoint - adding {}", string, info.into_inner());
-        format!("{}", string)
+        format!("{}\n", string)
     }
 
     fn index_del(info: Path<(String)>) -> impl Responder {
         let string: &str = "DEL";
 
         println!("{} endpoint - deleting {}", string, info.into_inner());
-        format!("{}", string)
+        format!("{}\n", string)
     }
 
     server::new(
