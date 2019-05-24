@@ -2,12 +2,59 @@ extern crate actix_web;
 #[macro_use]
 extern crate lazy_static;
 extern crate rand;
+extern crate reqwest;
+extern crate serde;
+extern crate serde_json;
 
-use std::collections::HashSet;
-use std::sync::Mutex;
 use actix_web::{http, server, App, Path, Responder};
-use rand::prelude::thread_rng;
 use rand::Rng;
+use rand::prelude::thread_rng;
+use serde::Deserialize;
+use std::collections::HashSet;
+use std::error::Error;
+use std::sync::Mutex;
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct PageInfoType {
+    #[allow(dead_code)]
+    totalResults: u8,
+
+    #[allow(dead_code)]
+    resultsPerPage: u8
+}
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct  ItemType {
+    #[allow(dead_code)]
+    kind: String,
+
+    #[allow(dead_code)]
+    etag: String,
+
+    #[allow(dead_code)]
+    id: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct YoutubeResponseType {
+    #[allow(dead_code)]
+    kind: String,
+
+    #[allow(dead_code)]
+    etag: String,
+
+    #[allow(dead_code)]
+    nextPageToken: String,
+
+    #[allow(dead_code)]
+    pageInfo: PageInfoType,
+
+    #[allow(dead_code)]
+    items: Vec<ItemType>
+}
 
 lazy_static! {
     static ref KEYS: Mutex<Vec<String>> = Mutex::new(vec![]);
@@ -65,6 +112,39 @@ fn index_del(info: Path<(String)>) -> impl Responder {
 
     println!("DEL endpoint - deleting {} - new size {}", value, len_key());
     format!("DEL {}\n", value)
+}
+
+fn is_key_good(key: String) -> bool {
+    let url: String =
+        format!("https://www.googleapis.com/youtube/v3/channels?part=id&id=UC-lHJZR3Gqxm24_Vd_AJ5Yw&key={}", key);
+
+    let resp: Result<reqwest::Response, reqwest::Error> = reqwest::get(url);
+    if resp.is_err() {
+        eprint!("{} - {}", key, resp.err().unwrap().description());
+        return false;
+    }
+
+    let mut resp = resp.unwrap();
+    if resp.status() != 200 {
+        eprint!("{} - Received status code {}", key, resp.status());
+        return false;
+    }
+
+    let result: Result<String, reqwest::Error> = resp.text();
+    if result.is_err() {
+        eprint!("{} - {}", key, result.err().unwrap().description());
+        return false;
+    }
+
+    let s: &str = result.unwrap().as_str();
+    let json_obj: Result<YoutubeResponseType, serde_json::Error> = serde_json::from_str(s);
+
+    if json_obj.is_err() {
+        eprint!("{} - {}", key, json_obj.err().unwrap().description());
+        return false;
+    }
+
+    true
 }
 
 fn main() {
