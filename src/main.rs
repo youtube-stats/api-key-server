@@ -60,8 +60,18 @@ lazy_static! {
 }
 
 fn get_key() -> String {
-    let keys: Key = KEYS.lock().unwrap();
-    let cloned_keys: Vec<String> = keys.iter().filter(|k| *k.1).collect();
+    let keys: Key = KEYS.lock().unwrap().clone();
+    let cloned_keys: Vec<String> = {
+        let mut cloned_keys: Vec<String> = Vec::new();
+
+        for k in keys {
+            if k.1 {
+                cloned_keys.push(k.0.clone());
+            }
+        }
+
+        cloned_keys
+    };
 
     cloned_keys[thread_rng().gen_range(0, cloned_keys.len())].clone()
 }
@@ -103,6 +113,7 @@ fn is_key_good(key: String) -> bool {
         return false;
     }
 
+    println!("Key {} is good - keeping it", key);
     true
 }
 
@@ -112,25 +123,21 @@ fn main() {
         let init_keys: Vec<String> = std::env::args().skip(1).collect();
         println!(" Inserting {} keys", init_keys.len());
 
-        let mut keys: Key = KEYS.lock().unwrap();
         for k in init_keys {
             println!("Adding key {}", k);
-            keys.insert(k, true);
+            KEYS.lock().unwrap().insert(k, true);
         }
     }
 
     std::thread::spawn(move  || {
         loop {
-            let keys_result = KEYS.lock().unwrap().clone();
+            let keys_result: Key = KEYS.lock().unwrap().clone();
 
             println!("Checking keys...");
             for i in keys_result {
-                let key: String = i.clone();
-                if is_key_good(key.clone()) {
-                    println!("Key {} is good - keeping it", i);
-                } else {
-                    del_key(key);
-                }
+                let key: String = i.0.clone();
+                let value: bool = is_key_good(key.clone());
+                KEYS.lock().unwrap().insert(key, value);
 
                 let dur: std::time::Duration = std::time::Duration::from_secs(10);
                 std::thread::sleep(dur);
