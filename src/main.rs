@@ -70,7 +70,7 @@ fn index_del(info: Path<(String)>) -> impl Responder {
 fn main() {
     println!("start");
     {
-        let args = std::env::args().skip(1).collect();
+        let args: Vec<String> = std::env::args().skip(1).collect();
         println!(" Inserting {} keys", args.len());
         let mut keys = KEYS.lock().unwrap();
         for value in args {
@@ -79,13 +79,13 @@ fn main() {
         }
     }
 
-    /*    server::new(
-            || App::new()
-                .route("/get", http::Method::GET, index_get)
-                .route("/len", http::Method::GET, index_len)
-                .route("/add/{key}", http::Method::GET, index_add)
-                .route("/del/{key}", http::Method::GET, index_del))
-            .bind("127.0.0.1:8080")
-            .expect("Can not bind to port 8000")
-            .run();*/
+    server::new(
+        || App::new()
+            .route("/get", http::Method::GET, index_get)
+            .route("/len", http::Method::GET, index_len)
+            .route("/add/{key}", http::Method::GET, index_add)
+            .route("/del/{key}", http::Method::GET, index_del))
+        .bind("127.0.0.1:8080")
+        .expect("Can not bind to port 8080")
+        .run();
 }
