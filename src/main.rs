@@ -10,9 +10,11 @@ use actix_web::{http, server, App, Path, Responder};
 use rand::Rng;
 use rand::prelude::thread_rng;
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Mutex;
+
+type Key = HashMap<String, bool>;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize)]
@@ -54,31 +56,14 @@ struct YoutubeResponseType {
 }
 
 lazy_static! {
-    static ref KEYS: Mutex<Vec<String>> = Mutex::new(vec![]);
-    static ref HASH_KEYS: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
+    static ref KEYS: Mutex<Key> = Mutex::new(HashMap::new());
 }
 
 fn get_key() -> String {
-    let keys = KEYS.lock().unwrap();
-    keys[thread_rng().gen_range(0, keys.len())].clone()
-}
+    let keys: Key = KEYS.lock().unwrap();
+    let cloned_keys: Vec<String> = keys.iter().filter(|k| *k.1).collect();
 
-fn len_key() -> usize {
-    KEYS.lock().unwrap().len()
-}
-
-fn add_key(value: String) {
-    if !HASH_KEYS.lock().unwrap().contains(&value) {
-        KEYS.lock().unwrap().push(value.clone());
-        HASH_KEYS.lock().unwrap().insert(value);
-    }
-}
-
-fn del_key(value: String) {
-    if HASH_KEYS.lock().unwrap().contains(&value) {
-        let index: usize = KEYS.lock().unwrap().iter().position(|x| *x == value).unwrap();
-        KEYS.lock().unwrap().remove(index);
-    }
+    cloned_keys[thread_rng().gen_range(0, cloned_keys.len())].clone()
 }
 
 fn index_get(_info: Path<()>) -> impl Responder {
@@ -86,29 +71,6 @@ fn index_get(_info: Path<()>) -> impl Responder {
 
     println!("GET {}", key);
     format!("{}", key)
-}
-
-fn index_len(_info: Path<()>) -> impl Responder {
-    let len: usize = len_key();
-
-    println!("LEN {}", len);
-    format!("{}", len)
-}
-
-fn index_add(info: Path<(String)>) -> impl Responder {
-    let value: String = info.into_inner();
-    add_key(value.clone());
-
-    println!("ADD endpoint - adding {} - new size {}", value, len_key());
-    format!("ADD {}\n", value)
-}
-
-fn index_del(info: Path<(String)>) -> impl Responder {
-    let value: String = info.into_inner();
-    del_key(value.clone());
-
-    println!("DEL endpoint - deleting {} - new size {}", value, len_key());
-    format!("DEL {}\n", value)
 }
 
 fn is_key_good(key: String) -> bool {
@@ -147,16 +109,17 @@ fn is_key_good(key: String) -> bool {
 fn main() {
     println!("start");
     {
-        let args: Vec<String> = std::env::args().skip(1).collect();
-        println!(" Inserting {} keys", args.len());
-        let mut keys = KEYS.lock().unwrap();
-        for value in args {
-            println!("Adding key {}", value);
-            keys.push(value);
+        let init_keys: Vec<String> = std::env::args().skip(1).collect();
+        println!(" Inserting {} keys", init_keys.len());
+
+        let mut keys: Key = KEYS.lock().unwrap();
+        for k in init_keys {
+            println!("Adding key {}", k);
+            keys.insert(k, true);
         }
     }
 
-    std::thread::spawn(|| {
+    std::thread::spawn(move  || {
         loop {
             let keys_result = KEYS.lock().unwrap().clone();
 
@@ -177,10 +140,7 @@ fn main() {
 
     server::new(
         || App::new()
-            .route("/get", http::Method::GET, index_get)
-            .route("/len", http::Method::GET, index_len)
-            .route("/add/{key}", http::Method::GET, index_add)
-            .route("/del/{key}", http::Method::GET, index_del))
+            .route("/get", http::Method::GET, index_get))
         .bind("127.0.0.1:8080")
         .expect("Can not bind to port 8080")
         .run();
