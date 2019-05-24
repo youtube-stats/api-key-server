@@ -47,9 +47,6 @@ struct YoutubeResponseType {
     etag: String,
 
     #[allow(dead_code)]
-    nextPageToken: String,
-
-    #[allow(dead_code)]
     pageInfo: PageInfoType,
 
     #[allow(dead_code)]
@@ -118,29 +115,29 @@ fn is_key_good(key: String) -> bool {
     let url: String =
         format!("https://www.googleapis.com/youtube/v3/channels?part=id&id=UC-lHJZR3Gqxm24_Vd_AJ5Yw&key={}", key);
 
-    let resp: Result<reqwest::Response, reqwest::Error> = reqwest::get(url);
+    let resp: Result<reqwest::Response, reqwest::Error> = reqwest::get(url.as_str());
     if resp.is_err() {
-        eprint!("{} - {}", key, resp.err().unwrap().description());
+        eprintln!("{} - {}", key, resp.err().unwrap().description());
         return false;
     }
 
     let mut resp = resp.unwrap();
     if resp.status() != 200 {
-        eprint!("{} - Received status code {}", key, resp.status());
+        eprintln!("{} - Received status code {}", key, resp.status());
         return false;
     }
 
     let result: Result<String, reqwest::Error> = resp.text();
     if result.is_err() {
-        eprint!("{} - {}", key, result.err().unwrap().description());
+        eprintln!("{} - {}", key, result.err().unwrap().description());
         return false;
     }
 
-    let s: &str = result.unwrap().as_str();
-    let json_obj: Result<YoutubeResponseType, serde_json::Error> = serde_json::from_str(s);
+    let s: String = result.unwrap().clone();
+    let json_obj: Result<YoutubeResponseType, serde_json::Error> = serde_json::from_str(s.as_str());
 
     if json_obj.is_err() {
-        eprint!("{} - {}", key, json_obj.err().unwrap().description());
+        eprintln!("{} - {}", key, json_obj.err().unwrap().description());
         return false;
     }
 
@@ -158,6 +155,25 @@ fn main() {
             keys.push(value);
         }
     }
+
+    std::thread::spawn(|| {
+        loop {
+            let keys_result = KEYS.lock().unwrap().clone();
+
+            println!("Checking keys...");
+            for i in keys_result {
+                let key: String = i.clone();
+                if is_key_good(key.clone()) {
+                    println!("Key {} is good - keeping it", i);
+                } else {
+                    del_key(key);
+                }
+
+                let dur: std::time::Duration = std::time::Duration::from_secs(10);
+                std::thread::sleep(dur);
+            }
+        }
+    });
 
     server::new(
         || App::new()
