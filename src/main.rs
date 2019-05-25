@@ -73,7 +73,11 @@ fn get_key() -> String {
         cloned_keys
     };
 
-    cloned_keys[thread_rng().gen_range(0, cloned_keys.len())].clone()
+    if cloned_keys.is_empty() {
+        String::new()
+    } else {
+        cloned_keys[thread_rng().gen_range(0, cloned_keys.len())].clone()
+    }
 }
 
 fn index_get(_info: Path<()>) -> impl Responder {
