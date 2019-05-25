@@ -117,6 +117,7 @@ fn index_info(_info: Path<()>) -> impl Responder {
         keys: cloned_keys
     };
 
+    println!("INFO");
     serde_json::to_string(&value)
 }
 
