@@ -9,7 +9,7 @@ extern crate serde_json;
 use actix_web::{http, server, App, Path, Responder};
 use rand::Rng;
 use rand::prelude::thread_rng;
-use serde::Deserialize;
+use serde::{Deserialize,Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Mutex;
@@ -55,6 +55,17 @@ struct YoutubeResponseType {
     items: Vec<ItemType>
 }
 
+#[derive(Serialize)]
+struct KeyItem {
+    key: String,
+    conditition: bool
+}
+
+#[derive(Serialize)]
+struct KeysJson {
+    keys: Vec<KeyItem>
+}
+
 lazy_static! {
     static ref KEYS: Mutex<Key> = Mutex::new(HashMap::new());
 }
@@ -85,6 +96,28 @@ fn index_get(_info: Path<()>) -> impl Responder {
 
     println!("GET {}", key);
     format!("{}", key)
+}
+
+fn index_info(_info: Path<()>) -> impl Responder {
+    let keys: Key = KEYS.lock().unwrap().clone();
+    let cloned_keys: Vec<KeyItem> = {
+        let mut cloned_keys: Vec<KeyItem> = Vec::new();
+
+        for k in keys {
+            cloned_keys.push(KeyItem {
+                key: k.0.clone(),
+                conditition: k.1
+            });
+        }
+
+        cloned_keys
+    };
+
+    let value: KeysJson = KeysJson {
+        keys: cloned_keys
+    };
+
+    serde_json::to_string(&value)
 }
 
 fn is_key_good(key: String) -> bool {
@@ -150,7 +183,8 @@ fn main() {
 
     server::new(
         || App::new()
-            .route("/get", http::Method::GET, index_get))
+            .route("/get", http::Method::GET, index_get)
+            .route("/info", http::Method::GET, index_info))
         .bind("127.0.0.1:8080")
         .expect("Can not bind to port 8080")
         .run();
