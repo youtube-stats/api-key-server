@@ -129,7 +129,7 @@ fn main() {
 
         for k in init_keys {
             println!("Adding key {}", k);
-            KEYS.lock().unwrap().insert(k, true);
+            KEYS.lock().unwrap().insert(k, false);
         }
     }
 
