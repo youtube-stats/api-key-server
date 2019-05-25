@@ -186,7 +186,7 @@ fn main() {
         || App::new()
             .route("/get", http::Method::GET, index_get)
             .route("/info", http::Method::GET, index_info))
-        .bind("127.0.0.1:8080")
+        .bind("0.0.0.0:8080")
         .expect("Can not bind to port 8080")
         .run();
 }
