@@ -128,8 +128,7 @@ fn main() {
         println!(" Inserting {} keys", init_keys.len());
 
         for k in init_keys {
-            println!("Adding key {}", k);
-            KEYS.lock().unwrap().insert(k, false);
+            KEYS.lock().unwrap().insert(k.clone(), is_key_good(k));
         }
     }
 
