@@ -176,7 +176,8 @@ fn main() {
                 let value: bool = is_key_good(key.clone());
                 KEYS.lock().unwrap().insert(key, value);
 
-                let dur: std::time::Duration = std::time::Duration::from_secs(300);
+                let dur: std::time::Duration =
+                  std::time::Duration::from_secs(60);
                 std::thread::sleep(dur);
             }
         }
