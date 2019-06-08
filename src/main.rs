@@ -177,7 +177,7 @@ fn main() {
                 KEYS.lock().unwrap().insert(key, value);
 
                 let dur: std::time::Duration =
-                  std::time::Duration::from_secs(60);
+                  std::time::Duration::from_secs(360);
                 std::thread::sleep(dur);
             }
         }
